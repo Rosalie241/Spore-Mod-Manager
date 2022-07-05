@@ -7,11 +7,11 @@
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
-    std::wstring currentDirectory = std::filesystem::current_path().wstring();
     BOOL ret;
     STARTUPINFOW startupInfo = {0};
     PROCESS_INFORMATION processInfo = {0};
     DWORD processCreationFlags = 0;
+    std::string errorMessage;
 
     std::wstring commandLine = L"SporeAppOriginal.exe";
     commandLine += L" ";
@@ -37,6 +37,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     if (ret != TRUE)
     {
+        errorMessage = "Failed to create Spore process: ";
+        errorMessage += std::to_string(GetLastError());
+
+        MessageBoxA(nullptr, errorMessage.c_str(), "CustomSporeApp", MB_OK);
         return 1;
     }
 
