@@ -56,7 +56,14 @@ namespace SporeMods.Core.Injection
 		{
 			try
 			{
-				_executablePath = Path.Combine(SporebinEP1, "SporeApp.exe");
+				foreach (string exe in new string[] { "SporeAppOriginal.exe", "SporeApp.exe" })
+				{
+					_executablePath = Path.Combine(SporebinEP1, exe);
+					if (File.Exists(_executablePath))
+                    {
+						break;
+                    }
+				}
 				if (File.Exists(_executablePath))
 				{
 					//IEnumerable<int> rawExeSizes = Enum.GetValues(typeof(GameInfo.)).Cast<long>();
@@ -266,13 +273,24 @@ namespace SporeMods.Core.Injection
 		{
 			var pOpenThreads = new List<IntPtr>();
 
-			string sporeAppName = "SporeApp";
+			string sporeAppName = "SporeAppOriginal";
 			string steamPath = SteamInfo.SteamPath;
 			steamPath = Path.Combine(steamPath, "Steam.exe");
-			Process steamProcess = Process.Start(new ProcessStartInfo(steamPath, "-applaunch " + SteamInfo.GalacticAdventuresSteamID.ToString() + " " + GetGameCommandLineOptions())
+
+			var processStartInfo = new ProcessStartInfo()
 			{
+				FileName = steamPath,
+				Arguments =
+					"-applaunch " +
+					SteamInfo.GalacticAdventuresSteamID.ToString() +
+					" -suspend " +
+					GetGameCommandLineOptions(),
 				UseShellExecute = true
-			});
+			};
+
+			Process.Start(processStartInfo);
+
+
 			/*ProcessInfo info = new ProcessInfo("SporeApp.exe");
 
 			info.Started += (sneder, args) =>
@@ -294,6 +312,7 @@ namespace SporeMods.Core.Injection
 
 
 			// OLD Get process and suspend all threads
+
 			Process[] processes = Process.GetProcessesByName(sporeAppName);
 			while (processes.Length == 0)
 			{
@@ -305,22 +324,17 @@ namespace SporeMods.Core.Injection
 
 			var process = processes[0];
 
-			// now pause all threads so we can inject; it's the equivalent to running in suspended state
+			// now gather all threads so we can inject & resume
 			foreach (ProcessThread pT in process.Threads)
 			{
 				IntPtr pOpenThread = NativeMethods.OpenThread(ThreadAccess.SUSPEND_RESUME, false, (uint)pT.Id);
 				if (pOpenThread != IntPtr.Zero) //((pOpenThread != IntPtr.Zero) && (Injector.WaitForSingleObject(pOpenThread, 0) != WAIT_ABANDONED))
 				{
-					if (NativeMethods.SuspendThread(pOpenThread) == -1) //     r/therewasanattempt
-					{
-						ThrowWin32Exception("Thread suspend failed (NOT LOCALIZED)");
-					}
-					else
-						pOpenThreads.Add(pOpenThread);
+					pOpenThreads.Add(pOpenThread);
 				}
 			}
 			_processInfo.dwProcessId = (uint)process.Id;
-			_processInfo.hProcess = process.Handle; //NativeMethods.OpenProcess(NativeMethods.AccessRequired, false, ProcessInfo.dwProcessId);
+			_processInfo.hThread = process.Handle; //NativeMethods.OpenProcess(NativeMethods.AccessRequired, false, ProcessInfo.dwProcessId);
 													// We must detect the executable type now
 			_processHandle = _processInfo.hProcess;
 			/*this.ProcessExecutableType();
@@ -334,7 +348,7 @@ namespace SporeMods.Core.Injection
 				this.ExecutablePath = process.MainModule.FileName;
 
 			this.ProcessExecutableType();*
-
+			
 			//GameVersion.VersionNames[(int)(GameVersionType.Steam_Patched)]; //string dllEnding = GameVersion.VersionNames[(int)this.ExecutableType];
 			*/
 			InjectDLLs(GameInfo.GetExecutableDllSuffix(GameExecutableType.GogOrSteam__March2017));
@@ -346,18 +360,12 @@ namespace SporeMods.Core.Injection
 					continue;
 				}
 
-				/*uint suspendCount = 0;
-				do
-				{
-					suspendCount = */
 				if (NativeMethods.ResumeThread(pOpenThread) == -1)
 				{
 					ThrowWin32Exception("Thread resume failed (NOT LOCALIZED)");
 				}
-				//} while (suspendCount > 0);
 
 				NativeMethods.CloseHandle(pOpenThread);
-
 			}
 
 			return;
