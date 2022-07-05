@@ -305,6 +305,9 @@ namespace SporeMods.Core.Injection
 			InjectDLLs(GameInfo.GetExecutableDllSuffix(GameExecutableType.GogOrSteam__March2017));
 
 			ResumeSporeProcess();
+
+			// close handle
+			NativeMethods.CloseHandle(_processInfo.hThread);
 		}
 
 		static bool ShouldGenerateCommandLineOptions
