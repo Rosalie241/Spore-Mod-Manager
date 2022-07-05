@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using static SporeMods.Core.GameInfo;
 
 namespace SporeMods.Core.Injection
@@ -301,7 +302,10 @@ namespace SporeMods.Core.Injection
 			_processInfo.dwProcessId = (uint)process.Id;
 			_processInfo.hProcess = process.Handle;
 			_processHandle = _processInfo.hProcess;
-			
+
+			// adding a delay seems to solve the 'Runtime Error R6034'
+			Thread.Sleep(3);
+
 			InjectDLLs(GameInfo.GetExecutableDllSuffix(GameExecutableType.GogOrSteam__March2017));
 
 			ResumeSporeProcess();
