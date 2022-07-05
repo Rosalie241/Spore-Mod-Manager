@@ -24,8 +24,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
         processCreationFlags = CREATE_SUSPENDED;
     }
 
-    SetDllDirectoryA("C:\\Windows\\WinSxS\\x86_microsoft.vc90.crt_1fc8b3b9a1e18e3b_9.0.30729.9625_none_508ef7e4bcbbe589");
-
     ret = CreateProcessW(nullptr, 
                 const_cast<LPWSTR>(commandLine.c_str()),
                 nullptr,
