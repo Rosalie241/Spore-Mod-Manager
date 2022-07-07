@@ -237,12 +237,12 @@ namespace SporeMods.Core
 
 		public static void ExtractDlls()
 		{
-			ExtractResource(CoreLibsPath, "SporeModAPI.lib");
-			ExtractResource(CoreLibsPath, "SporeModAPI.disk.dll");
-			ExtractResource(CoreLibsPath, "SporeModAPI.march2017.dll");
+			ExtractResource(CoreLibsPath, "ModAPIDLLs", "SporeModAPI.lib");
+			ExtractResource(CoreLibsPath, "ModAPIDLLs", "SporeModAPI.disk.dll");
+			ExtractResource(CoreLibsPath, "ModAPIDLLs", "SporeModAPI.march2017.dll");
 
-			ExtractResource(LegacyLibsPath, "SporeModAPI-disk.dll");
-			ExtractResource(LegacyLibsPath, "SporeModAPI-steam_patched.dll");
+			ExtractResource(LegacyLibsPath, "ModAPIDLLs", "SporeModAPI-disk.dll");
+			ExtractResource(LegacyLibsPath, "ModAPIDLLs", "SporeModAPI-steam_patched.dll");
 		}
 
 		public static void EnsureDllsAreExtracted()
@@ -253,9 +253,9 @@ namespace SporeMods.Core
 			}
 		}
 
-		static void ExtractResource(string outDir, string name)
+		public static void ExtractResource(string outDir, string dir, string name)
 		{
-			using (var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("SporeMods.Core.ModAPIDLLs." + name))
+			using (var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream($"SporeMods.Core.{dir}.{name}"))
 			{
 				using (var file = new FileStream(Path.Combine(outDir, name), FileMode.Create, FileAccess.ReadWrite))
 				{

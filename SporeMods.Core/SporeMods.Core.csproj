@@ -21,6 +21,7 @@
     <EmbeddedResource Include="Locale\ca-ca.txt" />
   </ItemGroup-->
   <ItemGroup>
+    <EmbeddedResource Include="ModLoaderDLLs\dinput8.dll" />
     <EmbeddedResource Include="ModAPIDLLs\SporeModAPI.lib" />
     <EmbeddedResource Include="ModAPIDLLs\SporeModAPI-disk.dll" />
     <EmbeddedResource Include="ModAPIDLLs\SporeModAPI-steam_patched.dll" />

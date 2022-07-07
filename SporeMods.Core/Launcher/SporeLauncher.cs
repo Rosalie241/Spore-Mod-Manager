@@ -68,7 +68,13 @@ namespace SporeMods.Core.Launcher
 							return;
 						}
 
-						// Steam users need to do something different...something which doesn't even work most of the time.
+						// copy mod loader if needed
+						if (!File.Exists(Path.Combine(SporebinEP1, "dinput8.dll")))
+						{
+							Settings.ExtractResource(SporebinEP1, "ModLoaderDLLs", "dinput8.dll");
+						}
+
+						// Steam users need to do something different
 						if (!SporeIsInstalledOnSteam())
 						{
 
