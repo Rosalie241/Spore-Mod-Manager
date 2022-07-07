@@ -26,8 +26,8 @@ using System.Windows.Interop;
 using System.Runtime.InteropServices;
 using SporeMods.Core.Mods;
 using System.Windows.Controls.Primitives;
-using static SporeMods.Core.Injection.SporeLauncher;
-using SporeMods.Core.Injection;
+using static SporeMods.Core.Launcher.SporeLauncher;
+using SporeMods.Core.Launcher;
 //using System.Runtime.Remoting.Messaging;
 using SporeMods.Manager.Configurators;
 using FolderBrowserDialog = System.Windows.Forms.FolderBrowserDialog;
@@ -2054,7 +2054,7 @@ namespace SporeMods.Manager
 			var win = Window.GetWindow(this);
 			double left = (int)SystemScaling.WpfUnitsToRealPixels(win.Left);
 			double top = (int)SystemScaling.WpfUnitsToRealPixels(win.Top);
-			var monitors = Core.Injection.NativeMethods.AllMonitors;
+			var monitors = Core.Launcher.NativeMethods.AllMonitors;
 
 			List<Window> monitorWindows = new List<Window>();
 

@@ -1,5 +1,5 @@
 ﻿using SporeMods.Core;
-using SporeMods.Core.Injection;
+using SporeMods.Core.Launcher;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

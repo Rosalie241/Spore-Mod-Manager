@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using static SporeMods.Core.GameInfo;
 
-namespace SporeMods.Core.Injection
+namespace SporeMods.Core.Launcher
 {
 	public static class SporeLauncher
 	{
@@ -35,10 +35,6 @@ namespace SporeMods.Core.Injection
 		//private string SteamPath;
 		private static GameExecutableType _executableType = GameExecutableType.None;
 
-		// Used for executing Spore and injecting DLLs
-		private static STARTUPINFO _startupInfo = new STARTUPINFO();
-		private static PROCESS_INFORMATION _processInfo = new PROCESS_INFORMATION();
-
 		public static int CurrentError = 0;
 
 		static void DeleteFolder(string path)
@@ -59,12 +55,6 @@ namespace SporeMods.Core.Injection
 				_executablePath = Path.Combine(SporebinEP1, "SporeApp.exe");
 				if (File.Exists(_executablePath))
 				{
-					//IEnumerable<int> rawExeSizes = Enum.GetValues(typeof(GameInfo.)).Cast<long>();
-					/*long[] exeSizes = new long[rawExeSizes.Length];
-					//exeSizes.CopyTo(rawExeSizes, 0);
-					for (int i = 0; i < rawExeSizes.Length; i++)
-						exeSizes[i] = (long)rawExeSizes.GetValue(i);*/
-
 					bool exeSizeRecognized = ExecutableFileGameTypes.Keys.Contains(new FileInfo(_executablePath).Length);
 					if (IsValidExe())
 					{
@@ -119,12 +109,12 @@ namespace SporeMods.Core.Injection
 								return;
 							}
 
-							InjectNormalSporeProcess(dllEnding);
+							LaunchNormalSporeProcess();
 
 						}
 						else
 						{
-							InjectSteamSporeProcess();
+							LaunchSteamSporeProcess();
 						}
 					}
 				}
@@ -174,199 +164,34 @@ namespace SporeMods.Core.Injection
 			Process.Start(ModApiHelpThreadURL);
 		}*/
 
-		static void InjectDLLs(string dllEnding)
+		static void LaunchNormalSporeProcess()
 		{
-			string coreDllInPath = CoreDllRetriever.GetStoredCoreDllPath(_executableType);
-			string coreDllOutPath = CoreDllRetriever.GetInjectableCoreDllPath(_executableType);
+			MessageDisplay.DebugShowMessageBox("SporebinPath: " + GameInfo.SporebinEP1 + "\nExecutablePath: " + _executablePath + "\nCommand Line Options: " + GetGameCommandLineOptions());
 
-			string libInPath = CoreDllRetriever.GetStoredCoreDllPath(_executableType, true);
-			string libOutPath = CoreDllRetriever.GetInjectableCoreDllPath(_executableType, true);
-
-			//Copy Core DLL and LIB
-			File.Copy(coreDllInPath, coreDllOutPath, true);
-			File.Copy(libInPath, libOutPath, true);
-			Permissions.GrantAccessFile(coreDllOutPath);
-			Permissions.GrantAccessFile(libOutPath);
-
-			//Inject Core DLL
-			Injector.InjectDLL(_processInfo, coreDllOutPath);
-
-			//Inject Legacy DLL
-			string legacyModApiDLLName = "SporeModAPI-" + dllEnding + ".dll";
-			string legacyModApiDLLPath = Path.Combine(Settings.LegacyLibsPath, legacyModApiDLLName);
-			Injector.InjectDLL(_processInfo, legacyModApiDLLPath);
-
-
-			CurrentError = System.Runtime.InteropServices.Marshal.GetLastWin32Error();
-
-			//GetStoredCoreDllPath
-			foreach (string s in Directory.EnumerateFiles(Settings.ModLibsPath).Where(x => (!Path.GetFileName(x).Equals(Path.GetFileName(coreDllOutPath), StringComparison.OrdinalIgnoreCase)) && x.ToLowerInvariant().EndsWith(".dll")))
+			var processStartInfo = new ProcessStartInfo()
 			{
-				string debugData = "Now injecting: " + s;
-				Console.WriteLine(debugData);
-				MessageDisplay.DebugShowMessageBox(debugData);
-				Injector.InjectDLL(_processInfo, s);
-			}
+				FileName = _executablePath,
+				Arguments = GetGameCommandLineOptions(),
+				UseShellExecute = true
+			};
 
-			if (Directory.Exists(Settings.LegacyLibsPath))
-			{
-				foreach (var file in Directory.EnumerateFiles(Settings.LegacyLibsPath).Where(x => x.EndsWith((dllEnding + ".dll").ToLowerInvariant())))//"*" + dllEnding + ".dll"))
-				{
-					string fileName = Path.GetFileName(file);
-					MessageDisplay.DebugShowMessageBox("5.* Preparing " + fileName);
-
-					// the ModAPI dll should already be loaded
-					if (fileName.ToLowerInvariant() != legacyModApiDLLName.ToLowerInvariant())
-					{
-						MessageDisplay.DebugShowMessageBox("5.* Injecting " + fileName);
-						Injector.InjectDLL(_processInfo, file);
-						CurrentError = System.Runtime.InteropServices.Marshal.GetLastWin32Error();
-					}
-					else
-						MessageDisplay.DebugShowMessageBox("5.* " + fileName + " was already injected!");
-				}
-			}
+			Process.Start(processStartInfo);
 		}
-
-		public static bool IsSporeSuspended() => IsSporeSuspended(false, out bool killed);
-
-
-		public static bool IsSporeSuspended(bool killIfYes, out bool killed)
-		{
-			List<ProcessThread> threads = new List<ProcessThread>();
-			var proc = Process.GetProcessById((int)_processInfo.dwProcessId);
-			bool retVal = proc.Threads.OfType<ProcessThread>().All(x => (x.ThreadState == System.Diagnostics.ThreadState.Wait) && (x.WaitReason == ThreadWaitReason.Suspended));
-
-			if (killIfYes)
-			{
-				proc.Kill();
-				killed = proc.HasExited;
-			}
-			else
-				killed = false;
-
-			return retVal;
-		}
-
-		static void InjectNormalSporeProcess(string dllEnding)
-		{
-			CreateSporeProcess();
-
-			InjectDLLs(dllEnding);
-
-			ResumeSporeProcess();
-			//MessageDisplay.ShowMessageBox("EnableBorderless", "_monitorSelected: " + _monitorSelected);
-			EnableBorderless(Convert.ToInt32(_processInfo.dwProcessId), _monitor);
-		}
-
-		private const int WAIT_ABANDONED = 0x00000080;
 
 		// Steam spore needs special treatment: the game will clsoe if not executed through Steam
-		static void InjectSteamSporeProcess()
+		static void LaunchSteamSporeProcess()
 		{
-			var pOpenThreads = new List<IntPtr>();
-
-			string sporeAppName = "SporeApp";
 			string steamPath = SteamInfo.SteamPath;
 			steamPath = Path.Combine(steamPath, "Steam.exe");
-			Process steamProcess = Process.Start(new ProcessStartInfo(steamPath, "-applaunch " + SteamInfo.GalacticAdventuresSteamID.ToString() + " " + GetGameCommandLineOptions())
+
+			var processStartInfo = new ProcessStartInfo()
 			{
+				FileName = steamPath,
+				Arguments = "-applaunch " + SteamInfo.GalacticAdventuresSteamID.ToString() + " " + GetGameCommandLineOptions(),
 				UseShellExecute = true
-			});
-			/*ProcessInfo info = new ProcessInfo("SporeApp.exe");
+			};
 
-			info.Started += (sneder, args) =>
-			{*/
-			/*try
-			{
-				Process process = Process.GetProcessesByName(sporeAppName)[0];
-				//NativeMethods.NtSuspendProcess(Process.GetProcessesByName(sporeAppName)[0].Handle);//(System.Management.EventArrivedEventArgs)args)
-				//NtSuspendProcess thingy
-				NativeMethods.DebugActiveProcess(process.Id);
-				_processInfo.dwProcessId = Convert.ToUInt32(process.Id);
-				_processInfo.hProcess = process.Handle;
-				InjectDLLs(GameInfo.GetExecutableDllSuffix(GameExecutableType.GogOrSteam__March2017));
-				NativeMethods.DebugActiveProcessStop(process.Id);
-			}
-			catch (Exception ex)
-			{*/
-			//Thread.Sleep(50);
-
-
-			// OLD Get process and suspend all threads
-			Process[] processes = Process.GetProcessesByName(sporeAppName);
-			while (processes.Length == 0)
-			{
-				// Just wait and try again
-				//Thread.Sleep(50);
-				//continue;
-				processes = Process.GetProcessesByName(sporeAppName);
-			}
-
-			var process = processes[0];
-
-			// now pause all threads so we can inject; it's the equivalent to running in suspended state
-			foreach (ProcessThread pT in process.Threads)
-			{
-				IntPtr pOpenThread = NativeMethods.OpenThread(ThreadAccess.SUSPEND_RESUME, false, (uint)pT.Id);
-				if (pOpenThread != IntPtr.Zero) //((pOpenThread != IntPtr.Zero) && (Injector.WaitForSingleObject(pOpenThread, 0) != WAIT_ABANDONED))
-				{
-					if (NativeMethods.SuspendThread(pOpenThread) == -1) //     r/therewasanattempt
-					{
-						ThrowWin32Exception("Thread suspend failed (NOT LOCALIZED)");
-					}
-					else
-						pOpenThreads.Add(pOpenThread);
-				}
-			}
-			_processInfo.dwProcessId = (uint)process.Id;
-			_processInfo.hProcess = process.Handle; //NativeMethods.OpenProcess(NativeMethods.AccessRequired, false, ProcessInfo.dwProcessId);
-													// We must detect the executable type now
-			_processHandle = _processInfo.hProcess;
-			/*this.ProcessExecutableType();
-			if (this.ExecutableType == GameVersionType.None)
-			{
-				// don't execute the game if the user closed the dialog
-				return;
-			}
-			// get the corerct executable path
-			if (LauncherSettings.ForcedGalacticAdventuresSporeAppPath == null)
-				this.ExecutablePath = process.MainModule.FileName;
-
-			this.ProcessExecutableType();*
-
-			//GameVersion.VersionNames[(int)(GameVersionType.Steam_Patched)]; //string dllEnding = GameVersion.VersionNames[(int)this.ExecutableType];
-			*/
-			InjectDLLs(GameInfo.GetExecutableDllSuffix(GameExecutableType.GogOrSteam__March2017));
-
-			foreach (IntPtr pOpenThread in pOpenThreads)
-			{
-				if (pOpenThread == IntPtr.Zero)
-				{
-					continue;
-				}
-
-				/*uint suspendCount = 0;
-				do
-				{
-					suspendCount = */
-				if (NativeMethods.ResumeThread(pOpenThread) == -1)
-				{
-					ThrowWin32Exception("Thread resume failed (NOT LOCALIZED)");
-				}
-				//} while (suspendCount > 0);
-
-				NativeMethods.CloseHandle(pOpenThread);
-
-			}
-
-			return;
-			//}
-			//}
-			//ModInstallation.InvokeErrorOccurred(new ErrorEventArgs(new Exception("EXPERIMENTAL INJECTION FAILURE")));
-			//}
-
-			//};   
+			Process.Start(processStartInfo);
 		}
 
 		static bool ShouldGenerateCommandLineOptions
@@ -560,157 +385,6 @@ namespace SporeMods.Core.Injection
 			return sb.ToString();
 		}
 
-
-		static void CreateSporeProcess()
-		{
-			var sb = new StringBuilder();
-			/*if (ShouldGenerateCommandLineOptions) //(!Environment.GetCommandLineArgs().Contains(UpdaterService.IgnoreUpdatesArg)) && (Environment.GetCommandLineArgs().Length > 1) && (Environment.GetCommandLineArgs()[1] == Settings.LaunchSporeWithoutManagerOptions))
-			{
-				int i = 0;
-				foreach (string arg in Environment.GetCommandLineArgs())
-				{
-					if ((i != 0) && (arg.ToLowerInvariant() != Settings.LaunchSporeWithoutManagerOptions.ToLowerInvariant()))
-					{
-						sb.Append(arg);
-						sb.Append(" ");
-					}
-					i++;
-				}
-			}
-			else
-            {*/
-				sb.Append(GetGameCommandLineOptions());
-			//}
-
-			/*if (false)
-			{
-				MessageDisplay.ShowMessageBox("ARGS", GetGameCommandLineOptions());
-				//2
-				if (Settings.ForceGameWindowingMode)
-				{
-					if (Settings.ForceWindowedMode == 1)
-						sb.Append("-f");
-					else// if (Settings.ForceWindowedMode == 0)
-						sb.Append("-w");
-
-					sb.Append(" ");
-
-					string size = "-r:";
-
-					if (Settings.ForceWindowedMode == 2)
-						size += (_monitor.rcMonitor.Right - _monitor.rcMonitor.Left).ToString() + "x" + (_monitor.rcMonitor.Bottom - _monitor.rcMonitor.Top).ToString();
-					else if (Settings.ForceGameWindowBounds)
-					{
-						//MessageDisplay.DebugShowMessageBox("MONITOR: " + monitor.rcMonitor.Left + ", " + monitor.rcMonitor.Top + ", " + monitor.rcMonitor.Right + ", " + monitor.rcMonitor.Bottom + "\n" + +monitor.rcWork.Left + ", " + monitor.rcWork.Top + ", " + monitor.rcWork.Right + ", " + monitor.rcWork.Bottom);
-
-						if (Settings.AutoGameWindowBounds)
-						{
-							MessageDisplay.DebugShowMessageBox("Settings.AutoGameWindowBounds is true");
-							if (Settings.ForceGameWindowingMode)
-							{
-								MessageDisplay.DebugShowMessageBox("Settings.ForceGameWindowingMode is true, Settings.ForceWindowedMode is " + Settings.ForceWindowedMode);
-								if (Settings.ForceWindowedMode == 0)
-								{
-									size += (_monitor.rcWork.Right - _monitor.rcWork.Left);
-								}
-								else// if (Settings.ForceWindowedMode == 1)
-									size += (_monitor.rcMonitor.Right - _monitor.rcMonitor.Left);
-								/*else
-									size += Settings.ForcedGameWindowWidth;*
-							}
-							else
-								size += Settings.ForcedGameWindowWidth;
-						}
-						else
-							size += Settings.ForcedGameWindowWidth;
-
-						size += "x";
-
-						if (Settings.AutoGameWindowBounds)
-						{
-							if (Settings.ForceGameWindowingMode)
-							{
-								int maximizedTitlebarHeight = CaptionHeight;
-								if (Settings.ForceWindowedMode == 0)
-									size += ((_monitor.rcWork.Bottom - _monitor.rcWork.Top) - maximizedTitlebarHeight);
-								else if (Settings.ForceWindowedMode == 1)
-									size += ((_monitor.rcMonitor.Bottom - _monitor.rcMonitor.Top) - maximizedTitlebarHeight);
-								else
-									size += Settings.ForcedGameWindowHeight;
-							}
-							else
-								size += Settings.ForcedGameWindowHeight;
-						}
-						else
-							size += Settings.ForcedGameWindowHeight;
-					}
-					else
-						MessageDisplay.DebugShowMessageBox("Settings.ForceGameWindowBounds is false!");
-
-					sb.Append(size);
-
-					sb.Append(" ");
-				}
-
-				if (Settings.ForceGameLocale && (!string.IsNullOrWhiteSpace(Settings.ForcedGameLocale)))
-				{
-					string option = "-locale:";
-					if (Settings.ForcedGameLocale.StartsWith("-"))
-						option += Settings.ForcedGameLocale.Substring(1);
-					else
-						option += Settings.ForcedGameLocale;
-
-					sb.Append(option);
-					sb.Append(" ");
-				}
-
-				if (Settings.UseCustomGameState && (!string.IsNullOrWhiteSpace(Settings.GameState)))
-				{
-					sb.Append("-state:" + Settings.GameState);
-					sb.Append(" ");
-				}
-
-				if (!string.IsNullOrWhiteSpace(Settings.CommandLineOptions))
-				{
-					string[] additionalOptions;
-					if (Settings.CommandLineOptions.Contains(" "))
-						additionalOptions = Settings.CommandLineOptions.Split(" ".ToCharArray());
-					else
-						additionalOptions = new string[] { Settings.CommandLineOptions };
-
-					foreach (string arg in additionalOptions)
-					{
-						sb.Append(arg);
-						sb.Append(" ");
-					}
-				}
-			}*/
-			/*string currentSporebinPath = string.Empty;
-			if (LauncherSettings.ForcedSporebinEP1Path != null)
-				currentSporebinPath = LauncherSettings.ForcedSporebinEP1Path;
-			else
-				currentSporebinPath = this.SporebinPath;*/
-
-			MessageDisplay.DebugShowMessageBox("SporebinPath: " + GameInfo.SporebinEP1 + "\nExecutablePath: " + _executablePath + "\nCommand Line Options: " + GetGameCommandLineOptions());
-
-			if (!NativeMethods.CreateProcess(null, "\"" + _executablePath + "\" " + sb.ToString(), IntPtr.Zero, IntPtr.Zero, false, ProcessCreationFlags.CREATE_SUSPENDED, IntPtr.Zero, GameInfo.SporebinEP1, ref _startupInfo, out _processInfo))
-			{
-				//throw new InjectException(Strings.ProcessNotStarted);
-				int lastError = System.Runtime.InteropServices.Marshal.GetLastWin32Error();
-				MessageDisplay.ShowMessageBox(GetLocalizedString("LauncherError!Process!Create") + lastError.ToString()); //Strings.ProcessNotStarted);
-				throw new System.ComponentModel.Win32Exception(lastError);
-			}
-		}
-
-		static void ResumeSporeProcess()
-		{
-			if (NativeMethods.ResumeThread(_processInfo.hThread) != 1)
-			{
-				/*throw new InjectException(Strings.ProcessNotResumed);*/
-				ThrowWin32Exception(GetLocalizedString("LauncherError!Process!Resume")); //ThrowWin32Exception(Strings.ProcessNotResumed);
-			}
-		}
-
 		static void EnableBorderless(int pid, NativeMethods.MonitorInfoEx monitor)
 		{
 			if (ShouldGenerateCommandLineOptions && Settings.ForceGameWindowingMode && (Settings.ForceWindowedMode == 2))
@@ -852,11 +526,6 @@ namespace SporeMods.Core.Injection
 			return executableType;
 		}
 		*/
-
-		public static void ThrowWin32Exception(string info)
-		{
-			ThrowWin32Exception(info, System.Runtime.InteropServices.Marshal.GetLastWin32Error());
-		}
 
 		public static void ThrowWin32Exception(string info, int error)
 		{

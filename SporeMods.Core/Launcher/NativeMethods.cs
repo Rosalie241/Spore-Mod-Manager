@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 using System.Runtime.InteropServices;
 
-namespace SporeMods.Core.Injection
+namespace SporeMods.Core.Launcher
 {
 	[Flags]
 	public enum AllocationType
@@ -108,70 +108,6 @@ namespace SporeMods.Core.Injection
 
 	public class NativeMethods
 	{
-		//[DllImport("kernel32.dll", SetLastError = true)]
-		//public static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, uint dwStackSize, 
-		//    IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, out IntPtr lpThreadId);
-
-		//[DllImport("kernel32", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
-		//public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
-
-		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern bool CreateProcess(string lpApplicationName,
-			   string lpCommandLine, IntPtr lpProcessAttributes,
-			   IntPtr lpThreadAttributes,
-			   bool bInheritHandles, ProcessCreationFlags dwCreationFlags,
-			   IntPtr lpEnvironment, string lpCurrentDirectory,
-			   ref STARTUPINFO lpStartupInfo,
-			   out PROCESS_INFORMATION lpProcessInformation);
-
-		public static uint AccessRequired = 0x0002 | 0x0020 | 0x0008 | 0x0400 | 0x0010; //0x0002 | 0x0020 | 0x0008; //0xF0000 | 0x00100000 | 0xFFFF;
-
-		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, uint dwProcessId);
-
-		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern IntPtr OpenThread(ThreadAccess dwDesiredAccess, bool bInheritHandle, uint dwThreadId);
-
-		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern int ResumeThread(IntPtr hThread);
-
-		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern int SuspendThread(IntPtr hThread);
-
-		[DllImport("kernel32", CharSet = CharSet.Auto, SetLastError = true)]
-		public static extern bool CloseHandle(IntPtr handle);
-
-		//[DllImport("kernel32.dll", SetLastError = true)]
-		//static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, uint nSize, out UIntPtr lpNumberOfBytesWritten);
-
-		//[DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
-		//static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress,
-		//    uint dwSize, AllocationType flAllocationType, MemoryProtection flProtect);
-
-		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, uint dwStackSize,
-			IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, out IntPtr lpThreadId);
-
-		[DllImport("kernel32", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
-		public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
-
-		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, uint nSize, out UIntPtr lpNumberOfBytesWritten);
-
-		[DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
-		public static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress,
-			uint dwSize, AllocationType flAllocationType, MemoryProtection flProtect);
-
-		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern IntPtr GetModuleHandle(string lpModuleName);
-
-		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
-
-		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern bool VirtualFreeEx(IntPtr hProcess, IntPtr lpAddress,
-			uint dwSize, AllocationType dwFreeType);
-
 		//MonitorInfo
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Rect
@@ -242,21 +178,6 @@ namespace SporeMods.Core.Injection
 				return monitors;
 			}
 		}
-
-		/*[DllImport("ntdll.dll", SetLastError = false)]
-		public static extern IntPtr NtSuspendProcess(IntPtr ProcessHandle);*/
-		[DllImport("kernel32.dll")]
-		public static extern bool DebugActiveProcess(int dwProcessId);
-
-
-		[DllImport("kernel32.dll")]
-		public static extern bool DebugActiveProcessStop(int dwProcessId);
-
-
-
-
-
-
 
 		[DllImport("user32.dll", SetLastError = true)]
 		public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);

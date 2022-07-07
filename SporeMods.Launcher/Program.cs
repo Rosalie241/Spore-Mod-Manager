@@ -1,5 +1,5 @@
 ﻿using SporeMods.Core;
-using SporeMods.Core.Injection;
+using SporeMods.Core.Launcher;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -107,15 +107,6 @@ namespace SporeMods.Launcher
 				}
 
 				CommonUI.MessageDisplay.ShowException(args.Exception, false);
-				try
-				{
-					if (SporeLauncher.IsSporeSuspended(true, out bool killed) && killed)
-					{
-						MessageBox.Show(GetLocalizedString("LauncherError!StartupAborted"));
-					}
-				}
-				catch { }
-
 				Process.GetCurrentProcess().Close();
 			};
 			MessageDisplay.MessageBoxShown += (sender, args) => CommonUI.MessageDisplay.ShowMessageBox(args.Content, args.Title);
