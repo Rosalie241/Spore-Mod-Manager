@@ -175,6 +175,23 @@ namespace SporeMods.Core
 		}
 
 		/// <summary>
+		/// Path to the modLoaderLib subfolder. Used for storing the SporeModLoader DLL for injection.
+		/// </summary>
+		public static string ModLoaderLibPath
+        {
+			get
+			{
+				string path = Path.Combine(ProgramDataPath, "modLoaderLib");
+				if (!Directory.Exists(path))
+				{
+					Directory.CreateDirectory(path);
+					Permissions.GrantAccessDirectory(path);
+				}
+				return path;
+			}
+        }
+
+		/// <summary>
 		/// Path to the ModAPI DLL overrides subfolder. Used for storing home-grown alternative ModAPI DLLs for injection.
 		/// </summary>
 		public static string OverrideLibsPath

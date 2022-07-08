@@ -46,6 +46,37 @@ namespace SporeMods.Core.Launcher
 			Directory.Delete(path);
 		}
 
+		static void InstallModLoader()
+		{
+			string installPath = Path.Combine(SporebinEP1, "dinput8.dll");
+			string extractedModLoaderPath = Path.Combine(Settings.ModLoaderLibPath, "dinput8.dll");
+
+			if (!File.Exists(installPath))
+            {
+				Settings.ExtractResource(SporebinEP1, "ModLoaderDLLs", "dinput8.dll");
+			}
+			else
+            {
+				Settings.ExtractResource(Settings.ModLoaderLibPath, "ModLoaderDLLs", "dinput8.dll");
+				FileVersionInfo installedModLoaderFileVersionInfo = FileVersionInfo.GetVersionInfo(installPath);
+				FileVersionInfo extractedModLoaderFileVersionInfo = FileVersionInfo.GetVersionInfo(extractedModLoaderPath);
+
+				if (installedModLoaderFileVersionInfo.FileVersion == null)
+                {
+					File.Copy(extractedModLoaderPath, installPath, true);
+					return;
+				}
+
+				Version installedModLoaderVersion = new Version(installedModLoaderFileVersionInfo.FileVersion);
+				Version extractedModLoaderVersion = new Version(extractedModLoaderFileVersionInfo.FileVersion);
+
+				if (extractedModLoaderVersion > installedModLoaderVersion)
+                {
+					File.Copy(extractedModLoaderPath, installPath, true);
+                }
+			}
+		}
+
 		public static Version Spore__1_5_1 = new Version(3, 0, 0, 2818);
 		public static Version Spore__March2017 = new Version(3, 1, 0, 22);
 		public static void LaunchGame()
@@ -68,11 +99,7 @@ namespace SporeMods.Core.Launcher
 							return;
 						}
 
-						// copy mod loader if needed
-						if (!File.Exists(Path.Combine(SporebinEP1, "dinput8.dll")))
-						{
-							Settings.ExtractResource(SporebinEP1, "ModLoaderDLLs", "dinput8.dll");
-						}
+						InstallModLoader();
 
 						// Steam users need to do something different
 						if (!SporeIsInstalledOnSteam())
