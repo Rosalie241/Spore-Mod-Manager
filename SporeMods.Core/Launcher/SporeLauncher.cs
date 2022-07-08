@@ -208,12 +208,16 @@ namespace SporeMods.Core.Launcher
 				UseShellExecute = true
 			};
 
-			Process.Start(processStartInfo);
+			var process = Process.Start(processStartInfo);
+
+			// wait until Spore is done
+			process.WaitForExit();
 		}
 
 		// Steam spore needs special treatment: the game will clsoe if not executed through Steam
 		static void LaunchSteamSporeProcess()
 		{
+			string sporeAppName = "SporeApp";
 			string steamPath = SteamInfo.SteamPath;
 			steamPath = Path.Combine(steamPath, "Steam.exe");
 
@@ -225,6 +229,19 @@ namespace SporeMods.Core.Launcher
 			};
 
 			Process.Start(processStartInfo);
+
+			// try to retrieve Spore process
+			var processes = Process.GetProcessesByName(sporeAppName);
+			while (processes.Length == 0)
+			{
+				processes = Process.GetProcessesByName(sporeAppName);
+			}
+			var process = processes[0];
+
+			// wait until Spore is done
+			// this is required for SporeModLoader
+			// so that it knows its been launched through SMM
+			process.WaitForExit();
 		}
 
 		static bool ShouldGenerateCommandLineOptions
