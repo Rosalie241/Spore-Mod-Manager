@@ -57,23 +57,33 @@ namespace SporeMods.Core.Launcher
 			}
 			else
             {
-				Settings.ExtractResource(Settings.ModLoaderLibPath, "ModLoaderDLLs", "dinput8.dll");
-				FileVersionInfo installedModLoaderFileVersionInfo = FileVersionInfo.GetVersionInfo(installPath);
-				FileVersionInfo extractedModLoaderFileVersionInfo = FileVersionInfo.GetVersionInfo(extractedModLoaderPath);
+				try
+				{
+					Settings.ExtractResource(Settings.ModLoaderLibPath, "ModLoaderDLLs", "dinput8.dll");
+					FileVersionInfo installedModLoaderFileVersionInfo = FileVersionInfo.GetVersionInfo(installPath);
+					FileVersionInfo extractedModLoaderFileVersionInfo = FileVersionInfo.GetVersionInfo(extractedModLoaderPath);
 
-				if (installedModLoaderFileVersionInfo.FileVersion == null)
-                {
-					File.Copy(extractedModLoaderPath, installPath, true);
+					if (installedModLoaderFileVersionInfo.FileVersion == null)
+					{
+						File.Copy(extractedModLoaderPath, installPath, true);
+						return;
+					}
+
+					Version installedModLoaderVersion = new Version(installedModLoaderFileVersionInfo.FileVersion);
+					Version extractedModLoaderVersion = new Version(extractedModLoaderFileVersionInfo.FileVersion);
+
+					if (extractedModLoaderVersion > installedModLoaderVersion)
+					{
+						File.Copy(extractedModLoaderPath, installPath, true);
+					}
+				}
+				catch (Exception)
+				{
+					// we can safely ignore the exception
+					// because the modloader dlls have already been installed,
+					// even if it's using an older version, that's fine
 					return;
 				}
-
-				Version installedModLoaderVersion = new Version(installedModLoaderFileVersionInfo.FileVersion);
-				Version extractedModLoaderVersion = new Version(extractedModLoaderFileVersionInfo.FileVersion);
-
-				if (extractedModLoaderVersion > installedModLoaderVersion)
-                {
-					File.Copy(extractedModLoaderPath, installPath, true);
-                }
 			}
 		}
 
